@@ -21,7 +21,8 @@ void help_commands(void) {
     eris_printf(ERIS_LOG_CMD, "  alias run <name>        Run a macro (shorthand: eris run <name>)\n");
     eris_printf(ERIS_LOG_CMD, "  ignore <file> [file]    Exclude file(s) from copush staging (stored in .eris)\n");
     eris_printf(ERIS_LOG_CMD, "  branch <name>           Create a branch and push it upstream\n");
-    eris_printf(ERIS_LOG_CMD, "  rebase [branch]         Rebase branch (default: current) onto updated base\n\n");
+    eris_printf(ERIS_LOG_CMD, "  rebase [branch]         Rebase branch (default: current) onto updated base\n");
+    eris_printf(ERIS_LOG_CMD, "  merge [branch]          Merge updated base into branch (default: current)\n\n");
     eris_printf(ERIS_LOG_CMD, "Chaining (Prolog router): and (then)  or (else)  not <cmd> (invert)\n");
     eris_printf(ERIS_LOG_CMD, "Example: eris init myapp and commit\n");
 }

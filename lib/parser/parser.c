@@ -9,6 +9,7 @@
 #include "commands/ignore/ignore.h"
 #include "commands/branch/branch.h"
 #include "commands/rebase/rebase.h"
+#include "commands/merge/merge.h"
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -74,6 +75,7 @@ static int load_command_modules(const char *project_root) {
     "lib/commands/ignore/ignore.pl",
     "lib/commands/branch/branch.pl",
     "lib/commands/rebase/rebase.pl",
+    "lib/commands/merge/merge.pl",
   };
   for (size_t i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
     char path[PATH_MAX];
@@ -222,6 +224,9 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
         ok = 1;
       } else if (strcmp(functor, "rebase") == 0) {
         rebase_cmd(argc, argv);
+        ok = 1;
+      } else if (strcmp(functor, "merge") == 0) {
+        merge_cmd(argc, argv);
         ok = 1;
       }
       free_argv(argc, argv);
