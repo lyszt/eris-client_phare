@@ -14,7 +14,6 @@
 #include "utils.h"
 
 #define MAX_MSG    4096
-#define SUBJECT_LIMIT 72
 
 /* readline prompt sequences — \001/\002 hide invisible chars from width calc */
 #define RL_CYAN  "\001\x1b[36m\002"
@@ -101,16 +100,8 @@ void commit_push(int argc, char **argv) {
 			snprintf(scope_buf, sizeof(scope_buf), "(%s)", scope_raw);
 		free(scope_raw);
 
-		/* short description, max 72 chars */
-		char *subject = NULL;
-		while (1) {
-			subject = prompt_required(RL_CYAN "  subject " RL_RESET ": ");
-			int len = (int)strlen(subject);
-			if (len <= SUBJECT_LIMIT) break;
-			eris_printf(ERIS_LOG_WARN, "  Too long (%d chars). Please shorten to %d.\n", len, SUBJECT_LIMIT);
-			free(subject);
-			subject = NULL;
-		}
+		/* short description */
+		char *subject = prompt_required(RL_CYAN "  subject " RL_RESET ": ");
 
 		/* Build conventional commit message */
 		int pos;
