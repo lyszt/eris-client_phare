@@ -16,10 +16,15 @@
 %% Throws error(eris_syntax(Message)) for user-facing syntax errors (e.g. unknown command).
 %% Drop the program name once, up front (the user writes it only once:
 %% `eris init and commit`), then split the remainder on the connectives.
+%% `alias add` stores a command chain, so its tokens keep the connectives verbatim
+%% instead of being split into goals.
 eris_goals(Argv, GoalList) :-
     drop_program_name(Argv, Rest),
-    split_by_connectives(Rest, Segs),
-    maplist(seg_to_goal, Segs, GoalList).
+    (   Rest = [alias, add|Args]
+    ->  GoalList = [goal(and, alias_add(Args))]
+    ;   split_by_connectives(Rest, Segs),
+        maplist(seg_to_goal, Segs, GoalList)
+    ).
 
 %% Split at 'and' and 'or'. Each segment is (Op, Tokens); Op is the connective
 %% that precedes this segment (and/or). First segment gets 'and'.

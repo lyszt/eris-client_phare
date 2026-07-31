@@ -21,9 +21,9 @@
 
 static int pl_initialised = 0;
 
-/* If the pending exception is error(eris_syntax(Message)), print it to stderr and clear; return 1. Else return 0. */
-static int pl_print_eris_syntax_error(void) {
-  term_t ex = PL_exception(0);
+/* Prints error(eris_syntax(Message)) to stderr.
+ * Receives an exception term and returns 1 when it matched, 0 otherwise. */
+static int pl_print_eris_syntax_error(term_t ex) {
   if (!ex || !PL_is_compound(ex)) return 0;
   atom_t name;
   size_t arity;
@@ -248,11 +248,19 @@ static int run_goals_via_prolog(int argc, char *argv[], const char *project_root
   { int _r = PL_put_term(args, argv_list); (void)_r; }
   PL_put_variable(args + 1);
 
-  if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, eris_goals_pred, args)) {
-    if (!pl_print_eris_syntax_error())
-      help_commands();
+  /* Open query instead of PL_call_predicate so the exception term stays reachable. */
+  qid_t qid = PL_open_query(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, eris_goals_pred, args);
+  if (!qid) {
+    help_commands();
     return 0;
   }
+  if (!PL_next_solution(qid)) {
+    if (!pl_print_eris_syntax_error(PL_exception(qid)))
+      help_commands();
+    PL_close_query(qid);
+    return 0;
+  }
+  PL_cut_query(qid);
   { int _r = PL_put_term(goal_list_ref, args + 1); (void)_r; }
 
   term_t head = PL_new_term_ref();

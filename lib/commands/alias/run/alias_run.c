@@ -1,4 +1,5 @@
 #include "alias_run.h"
+#include "commands/alias/alias_ops.h"
 #include "term/term.h"
 #include "utils.h"
 #include "utils/eris_template_utils.h"
@@ -7,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /* Macros are in the binary file .eris/.eris.macros (same file init creates). */
@@ -63,15 +65,22 @@ void alias_run(int argc, char **argv) {
     }
 #endif
 
+    int last_status = 0;
     for (size_t i = 0; i < n; i++) {
         if (!lines[i] || !lines[i][0]) continue;
-        const char *run = lines[i];
+        const char *cmd = NULL;
+        const char *op = split_alias_op(lines[i], &cmd);
+        if (!cmd[0]) continue;
+        if (strcmp(op, "and") == 0 && last_status != 0) continue;
+        if (strcmp(op, "or") == 0 && last_status == 0) continue;
+
+        const char *run = cmd;
         char buf[MAX_CMD_LINE];
         if (exec_path[0]) {
-            if (strcmp(lines[i], "eris") == 0) {
+            if (strcmp(cmd, "eris") == 0) {
                 run = exec_path;
-            } else if (strncmp(lines[i], "eris ", 5) == 0) {
-                int need = snprintf(buf, sizeof(buf), "%s %s", exec_path, lines[i] + 5);
+            } else if (strncmp(cmd, "eris ", 5) == 0) {
+                int need = snprintf(buf, sizeof(buf), "%s %s", exec_path, cmd + 5);
                 if (need > 0 && (size_t)need < sizeof(buf))
                     run = buf;
             }
@@ -79,8 +88,9 @@ void alias_run(int argc, char **argv) {
         fflush(stdout);
         int ret = system(run);
         fflush(stdout);
-        if (ret != 0)
-            err("eris: command exited %d: %s\n", ret, lines[i]);
+        last_status = WIFEXITED(ret) ? WEXITSTATUS(ret) : 1;
+        if (last_status != 0)
+            err("eris: command exited %d: %s\n", last_status, cmd);
     }
 
     for (size_t i = 0; i < n; i++) free(lines[i]);

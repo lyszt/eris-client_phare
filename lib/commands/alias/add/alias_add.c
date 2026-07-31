@@ -1,4 +1,5 @@
 #include "alias_add.h"
+#include "commands/alias/alias_ops.h"
 #include "term/term.h"
 #include "utils/eris_template_utils.h"
 #include <stdio.h>
@@ -8,15 +9,22 @@
 #include <limits.h>
 #include "utils.h"
 
-/*
- * Macros are stored in the binary file .eris/.eris.macros (same file init creates).
- *
- * Add (shell-friendly): use "do" between commands, or quote each command.
- *   eris alias add <name> do <cmd1 words> do <cmd2 words> ...
- *   eris alias add <name> "cmd1" "cmd2"
- */
+/* Macros live in the binary file .eris/.eris.macros, the same file init creates. */
 
 #define MAX_CMD_LINE 4096
+
+/* Appends one command line carrying the operator that precedes it.
+ * Receives the destination array with its count and returns nothing. */
+static void add_command_line(char **lines, int *nlines, int max_lines, const char *op, const char *cmd) {
+    if (!cmd[0] || *nlines >= max_lines)
+        return;
+    char line[MAX_CMD_LINE + 8];
+    if (snprintf(line, sizeof(line), "%s %s", op, cmd) < 0)
+        return;
+    lines[*nlines] = strdup(line);
+    if (lines[*nlines])
+        (*nlines)++;
+}
 
 void alias_add(int argc, char **argv) {
     char eris_location[PATH_MAX];
@@ -32,8 +40,8 @@ void alias_add(int argc, char **argv) {
     }
 
     if (argc < 1) {
-        eris_printf(ERIS_LOG_ERROR, "Usage: eris alias add [--global] <name> do <cmd1> do <cmd2> ...\n");
-        eris_printf(ERIS_LOG_ERROR, "   or: eris alias add [--global] <name> \"cmd1\" \"cmd2\"\n");
+        eris_printf(ERIS_LOG_ERROR, "Usage: eris alias add [--global] <name> <cmd1> and <cmd2> ...\n");
+        eris_printf(ERIS_LOG_ERROR, "Separators: do runs always, and runs on success, or runs on failure.\n");
         return;
     }
     const char *name = argv[0];
@@ -42,55 +50,34 @@ void alias_add(int argc, char **argv) {
         return;
     }
 
-    /* Build list of command lines: either split on "do" or one arg per line */
+    /* Each separator ends a command line, tokens in between are joined with spaces. */
     char *lines[256];
+    const int max_lines = (int)(sizeof(lines) / sizeof(lines[0]));
     int nlines = 0;
-    int use_delim = 0;
-    for (int i = 1; i < argc; i++)
-        if (argv[i] && strcmp(argv[i], "do") == 0) { use_delim = 1; break; }
-
-    if (use_delim) {
-        /* Split on "do": each segment becomes one command line (tokens joined with space) */
-        char seg[MAX_CMD_LINE];
-        size_t seglen = 0;
-        for (int i = 1; i < argc; i++) {
-            if (strcmp(argv[i], "do") == 0) {
-                if (seglen > 0 && nlines < (int)(sizeof(lines) / sizeof(lines[0]))) {
-                    seg[seglen] = '\0';
-                    lines[nlines++] = strdup(seg);
-                }
-                seglen = 0;
-                continue;
-            }
-            size_t len = strlen(argv[i]);
-            if (seglen + (seglen ? 1 : 0) + len >= sizeof(seg))
-                continue; /* skip token if segment would overflow */
-            if (seglen > 0)
-                seg[seglen++] = ' ';
-            memcpy(seg + seglen, argv[i], len + 1);
-            seglen += len;
-        }
-        if (seglen > 0 && nlines < (int)(sizeof(lines) / sizeof(lines[0]))) {
+    char seg[MAX_CMD_LINE];
+    size_t seglen = 0;
+    const char *op = "do";
+    for (int i = 1; i < argc; i++) {
+        if (!argv[i] || !argv[i][0])
+            continue;
+        const char *sep = find_alias_op(argv[i]);
+        if (sep) {
             seg[seglen] = '\0';
-            lines[nlines++] = strdup(seg);
+            add_command_line(lines, &nlines, max_lines, op, seg);
+            seglen = 0;
+            op = sep;
+            continue;
         }
-    } else {
-        /* No "do": join all remaining arguments into one command line (so e.g. echo "hello world" is one command) */
-        if (argc > 1 && nlines < (int)(sizeof(lines) / sizeof(lines[0]))) {
-            char one[MAX_CMD_LINE];
-            size_t olen = 0;
-            for (int i = 1; i < argc; i++) {
-                if (!argv[i] || !argv[i][0]) continue;
-                if (olen > 0) one[olen++] = ' ';
-                size_t len = strlen(argv[i]);
-                if (olen + len >= sizeof(one)) break;
-                memcpy(one + olen, argv[i], len + 1);
-                olen += len;
-            }
-            if (olen > 0)
-                lines[nlines++] = strdup(one);
-        }
+        size_t len = strlen(argv[i]);
+        if (seglen + (seglen ? 1 : 0) + len >= sizeof(seg))
+            continue;
+        if (seglen > 0)
+            seg[seglen++] = ' ';
+        memcpy(seg + seglen, argv[i], len + 1);
+        seglen += len;
     }
+    seg[seglen] = '\0';
+    add_command_line(lines, &nlines, max_lines, op, seg);
 
     char macro_path[PATH_MAX];
     if (is_global)
