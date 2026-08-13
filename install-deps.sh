@@ -22,7 +22,12 @@ case "$OS" in
         sudo apt install -y \
             build-essential \
             cmake \
-            libcurl4-openssl-dev
+            pkg-config \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            libgit2-dev \
+            libreadline-dev \
+            swi-prolog
         ;;
 
     fedora|rhel|centos)
@@ -31,7 +36,12 @@ case "$OS" in
             gcc \
             make \
             cmake \
-            libcurl-devel
+            pkgconfig \
+            libcurl-devel \
+            openssl-devel \
+            libgit2-devel \
+            readline-devel \
+            swi-prolog
         ;;
 
     arch|manjaro)
@@ -39,7 +49,12 @@ case "$OS" in
         sudo pacman -S --needed \
             base-devel \
             cmake \
-            curl
+            pkg-config \
+            curl \
+            openssl \
+            libgit2 \
+            readline \
+            swi-prolog
         ;;
 
     *)

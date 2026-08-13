@@ -28,6 +28,9 @@ check-deps:
 	command -v pkg-config >/dev/null 2>&1 || MISSING="$$MISSING pkg-config"; \
 	pkg-config --exists libcurl 2>/dev/null   || MISSING="$$MISSING libcurl-dev"; \
 	pkg-config --exists openssl 2>/dev/null   || MISSING="$$MISSING libssl-dev"; \
+	pkg-config --exists libgit2 2>/dev/null   || MISSING="$$MISSING libgit2-dev"; \
+	pkg-config --exists readline 2>/dev/null  || MISSING="$$MISSING readline-dev"; \
+	pkg-config --exists swipl 2>/dev/null     || MISSING="$$MISSING swi-prolog"; \
 	if [ -n "$$MISSING" ]; then \
 		echo "Missing:$$MISSING"; \
 		echo "Installing..."; \
@@ -38,11 +41,11 @@ check-deps:
 		case "$$ID" in \
 			ubuntu|debian) \
 				sudo apt-get update -qq && \
-				sudo apt-get install -y build-essential cmake libcurl4-openssl-dev libssl-dev pkg-config ;; \
+				sudo apt-get install -y build-essential cmake libcurl4-openssl-dev libssl-dev libgit2-dev libreadline-dev swi-prolog pkg-config ;; \
 			fedora|rhel|centos) \
-				sudo dnf install -y gcc gcc-c++ make cmake libcurl-devel openssl-devel pkgconfig ;; \
+				sudo dnf install -y gcc gcc-c++ make cmake libcurl-devel openssl-devel libgit2-devel readline-devel swi-prolog pkgconfig ;; \
 			arch|manjaro) \
-				sudo pacman -S --needed --noconfirm base-devel cmake curl openssl pkg-config ;; \
+				sudo pacman -S --needed --noconfirm base-devel cmake curl openssl libgit2 readline swi-prolog pkg-config ;; \
 			*) \
 				echo "Unsupported OS: $$ID. Install manually:$$MISSING"; exit 1 ;; \
 		esac; \

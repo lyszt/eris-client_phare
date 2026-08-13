@@ -1,5 +1,5 @@
 # Set libgit2 version as a variable
-set(LIBGIT2_VERSION 1.8.5)
+set(ERIS_LIBGIT2_VERSION 1.8.5)
 cmake_minimum_required(VERSION 3.10)
 
 project(ErisCLI VERSION 0.1 LANGUAGES C)
@@ -63,7 +63,7 @@ target_include_directories(eris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJE
 # libgit2: prefer the distro-packaged system library so package builds need no
 # network (works in offline/clean-chroot builds — PPA, makechrootpkg). Only fall
 # back to compiling the vendored source when no system libgit2 is available.
-set(LIBGIT2_DIR vendor/libgit2-${LIBGIT2_VERSION})
+set(LIBGIT2_DIR vendor/libgit2-${ERIS_LIBGIT2_VERSION})
 set(_eris_sys_git2 OFF)
 if(PkgConfig_FOUND)
   pkg_check_modules(LIBGIT2 IMPORTED_TARGET libgit2)
@@ -84,20 +84,41 @@ endif()
 if(_eris_sys_git2)
   message(STATUS "Eris: using system libgit2")
 else()
-  message(STATUS "Eris: system libgit2 not found; building vendored ${LIBGIT2_VERSION}")
-  set(LIBGIT2_ZIP vendor/libgit2-v${LIBGIT2_VERSION}.zip)
+  message(STATUS "Eris: system libgit2 not found; building vendored ${ERIS_LIBGIT2_VERSION}")
+  set(LIBGIT2_ZIP vendor/libgit2-v${ERIS_LIBGIT2_VERSION}.zip)
   if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/CMakeLists.txt")
+    file(MAKE_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}")
-      execute_process(COMMAND wget -O "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.zip")
+      message(STATUS "Downloading libgit2 v${ERIS_LIBGIT2_VERSION}...")
+      file(DOWNLOAD
+        "https://github.com/libgit2/libgit2/archive/refs/tags/v${ERIS_LIBGIT2_VERSION}.zip"
+        "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}"
+        STATUS _eris_dl_status
+        LOG _eris_dl_log)
+      list(GET _eris_dl_status 0 _eris_dl_code)
+      if(NOT _eris_dl_code EQUAL 0)
+        file(REMOVE "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}")
+        message(FATAL_ERROR "Failed to download libgit2 v${ERIS_LIBGIT2_VERSION}: ${_eris_dl_status}. Install the system package instead: 'sudo dnf install libgit2-devel' (Fedora/RHEL) or 'sudo apt install libgit2-dev' (Debian/Ubuntu).")
+      endif()
     endif()
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor" RESULT_VARIABLE _eris_untar_result)
+    if(NOT _eris_untar_result EQUAL 0)
+      file(REMOVE "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}")
+      message(FATAL_ERROR "Failed to extract ${LIBGIT2_ZIP}: ${_eris_untar_result}. The archive may be corrupt; delete it and re-run CMake, or install the system libgit2 package ('sudo dnf install libgit2-devel').")
+    endif()
+  endif()
+  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "Vendored libgit2 sources not found at ${LIBGIT2_DIR}. Install the system package ('sudo dnf install libgit2-devel' on Fedora/RHEL, 'sudo apt install libgit2-dev' on Debian/Ubuntu) and re-run CMake.")
   endif()
   add_subdirectory(${LIBGIT2_DIR})
   target_include_directories(eris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
   set(ERIS_GIT2_LIB git2)
 endif()
 
-find_library(READLINE_LIBRARY NAMES readline REQUIRED)
+find_library(READLINE_LIBRARY NAMES readline)
+if(NOT READLINE_LIBRARY)
+  message(FATAL_ERROR "Eris requires readline. Install the system package: 'sudo dnf install readline-devel' (Fedora/RHEL) or 'sudo apt install libreadline-dev' (Debian/Ubuntu), then re-run CMake.")
+endif()
 target_link_libraries(eris PRIVATE ${ERIS_GIT2_LIB} CURL::libcurl ${READLINE_LIBRARY})
 
 # Compiler flags (add -Wall by default)
