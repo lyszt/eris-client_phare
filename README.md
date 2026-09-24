@@ -67,13 +67,19 @@ eris run deploy
 ## Install
 
 ```bash
-make install
+make
 ```
 
-This builds the binary, copies it to `/usr/local/bin/eris`, and appends an alias to your `.bashrc` or `.zshrc` (detected automatically). Then:
+This builds the binary and symlinks it into `~/.local/bin/eris` (override with `LINK_DIR=...`), so `eris` works immediately without sudo. For a system-wide install instead:
 
 ```bash
-source ~/.zshrc   # or ~/.bashrc
+sudo make install
+```
+
+This builds the binary, installs it (plus its Prolog router files) to `/usr/local/lib/eris/`, and symlinks `/usr/local/bin/eris` to it. No shell alias is needed as long as `/usr/local/bin` is on your `PATH`. To install without root, use a user prefix:
+
+```bash
+make install PREFIX=$HOME/.local   # binary lands in ~/.local/bin
 ```
 
 Dependencies (`cmake`, `gcc`, `libcurl`, `libssl`, etc.) are checked and installed automatically during build if missing.

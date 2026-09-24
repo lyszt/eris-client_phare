@@ -132,8 +132,9 @@ set_target_properties(eris PROPERTIES
 # Write project root to eris.conf in $HOME/.config/eris-cli during build (optional; do not fail the build)
 add_custom_command(
   TARGET eris POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E env HOME=$ENV{HOME} sh -c "mkdir -p \"$$HOME/.config/eris-cli\" && echo 'PATH=${PROJECT_SOURCE_DIR}' > \"$$HOME/.config/eris-cli/eris.conf\"" || true
-  COMMENT "Writing project root to $HOME/.config/eris-cli/eris.conf (optional)"
+  COMMAND sh -c "mkdir -p '$ENV{HOME}/.config/eris-cli' && echo 'PATH=${PROJECT_SOURCE_DIR}' > '$ENV{HOME}/.config/eris-cli/eris.conf' || true"
+  COMMENT "Writing project root to $ENV{HOME}/.config/eris-cli/eris.conf (optional)"
+  VERBATIM
 )
 
 # Install target (optional)

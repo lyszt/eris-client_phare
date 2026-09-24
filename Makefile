@@ -7,14 +7,15 @@ CONFIG    ?= Debug
 BIN_NAME  ?= eris
 BIN       := $(BIN_NAME)
 PREFIX    ?= /usr/local
+LINK_DIR  ?= $(HOME)/.local/bin
 DESTDIR   ?=
 PPA       ?= ppa:lyszt/eris
 SERIES    ?= resolute
 GPG_KEY   ?= ADB85BD99D45665D
 
-.PHONY: all configure build run install uninstall deploy clean distclean check-deps deps help
+.PHONY: all configure build link run install uninstall deploy clean distclean check-deps deps help
 
-all: build
+all: build link
 
 # ── dependency checks ────────────────────────────────────────────────────────
 
@@ -74,6 +75,15 @@ build: configure
 	@echo "Building ($(JOBS) jobs) in $(BUILD_DIR)..."
 	@$(CMAKE) --build $(BUILD_DIR) -- -j$(JOBS)
 
+# Symlink the in-repo binary into LINK_DIR (on PATH by default on Fedora/Ubuntu)
+# so `eris` works right after `make`, no sudo. The binary finds its Prolog files
+# by resolving the symlink, so they stay in the repo.
+link: build
+	@mkdir -p $(LINK_DIR)
+	@ln -sf $(CURDIR)/$(BIN) $(LINK_DIR)/$(BIN)
+	@echo "Linked $(LINK_DIR)/$(BIN) -> $(CURDIR)/$(BIN)"
+	@case ":$$PATH:" in *":$(LINK_DIR):"*) ;; *) echo "Note: $(LINK_DIR) is not on your PATH; add it to your shell rc.";; esac
+
 run: build
 	@echo "Running $(BIN)"
 	@./$(BIN)
@@ -124,12 +134,13 @@ distclean:
 
 help:
 	@echo "Targets:"
-	@echo "  all          (default) configure + build"
+	@echo "  all          (default) configure + build + link"
+	@echo "  link         Symlink eris into $(LINK_DIR) (no sudo)"
 	@echo "  check-deps   Detect and install missing system deps"
 	@echo "  configure    Run cmake configure"
 	@echo "  build        Build the project"
 	@echo "  run          Build and run eris"
-	@echo "  install      Install to /usr/local/bin + add shell alias"
+	@echo "  install      System install to $(PREFIX) (needs sudo)"
 	@echo "  ctest        Run tests"
 	@echo "  clean        Clean build artifacts"
 	@echo "  distclean    Remove build directory entirely"

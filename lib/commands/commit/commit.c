@@ -105,7 +105,7 @@ void commit_push(int argc, char **argv) {
 
 		/* Build conventional commit message */
 		int pos;
-		if (branch[0])
+		if (branch[0] && strcmp(branch, "main") != 0 && strcmp(branch, "master") != 0)
 			pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s %s", type, scope_buf, branch, subject);
 		else
 			pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s", type, scope_buf, subject);
